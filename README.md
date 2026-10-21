@@ -113,3 +113,25 @@ for profile, QR code, and session uploads. The backend must be reachable over
 HTTPS; local XAMPP URLs are not accessible to Vercel visitors. Do not put
 database credentials or other backend secrets in Vercel's `VITE_*` variables,
 as those values are exposed to browser clients.
+
+### Supabase PostgreSQL migration (in progress)
+
+The PostgreSQL schema foundation is in
+`supabase/migrations/20261021220000_initial_schema.sql`. It creates a clean
+schema only; it does not import records from the local SQL Server database.
+Review and run this migration in the Supabase SQL Editor before enabling the
+frontend's Supabase authentication.
+
+Set `VITE_SUPABASE_URL` and the Supabase **publishable/anon** key as Vercel
+environment variables, then redeploy. Never put a Supabase service-role key in
+a `VITE_*` variable or frontend source. Once the migration and configuration
+are in place, `/admin-setup` provides a one-time first-admin account setup for
+`ramosjaredonarse07@gmail.com`; the administrator chooses a private password of at least 14
+characters. The database function only permits that email to claim the first
+admin role, and refuses to grant the role after one has already been claimed.
+
+This is only a schema and authentication foundation. The dashboards still call
+the PHP endpoints in `gym-backend/api`, which use SQL Server syntax and have
+not yet been replaced by Supabase Edge Functions. Do not treat this deployment
+as a fully migrated or functional online system until those API workflows have
+been ported and tested.

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import bgImage from "../assets/Capra bg.jpg";
 import logo from "../assets/logo.png";
+import { isSupabaseConfigured, supabase } from "../lib/supabase";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
@@ -33,7 +34,7 @@ function ForgotPassword() {
 
   const passwordCriteria = useMemo(
     () => ({
-      length: newPassword.length >= 8,
+      length: newPassword.length >= 14,
       uppercase: /[A-Z]/.test(newPassword),
       lowercase: /[a-z]/.test(newPassword),
       number: /[0-9]/.test(newPassword),
@@ -41,6 +42,35 @@ function ForgotPassword() {
     }),
     [newPassword]
   );
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return undefined;
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" && session) {
+        setStep("password");
+        setMessage("Recovery link verified. Choose a new password.");
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+    });
+
+    if (window.location.hash.includes("type=recovery")) {
+      supabase.auth.getSession().then(({ data: { session }, error: sessionError }) => {
+        if (sessionError) {
+          console.error("Unable to validate password recovery session:", sessionError);
+          setError(sessionError.message);
+        } else if (session) {
+          setStep("password");
+          setMessage("Recovery link verified. Choose a new password.");
+          window.history.replaceState(null, "", window.location.pathname);
+        }
+      });
+    }
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (resendCooldown <= 0) return undefined;
@@ -67,25 +97,34 @@ function ForgotPassword() {
 
     setIsLoading(true);
     try {
+      if (isSupabaseConfigured && supabase) {
+        const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(
+          normalizedEmail,
+          { redirectTo: `${window.location.origin}/forgot-password` },
+        );
+        if (recoveryError) throw recoveryError;
+        setEmail(normalizedEmail);
+        setMessage("If an account exists for this email, a password recovery link has been sent.");
+        setResendCooldown(60);
+        return;
+      }
+
       const response = await fetch(`${API_BASE_URL}/request_password_reset.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: normalizedEmail }),
       });
       const data = await response.json();
-
-      if (!data.success) {
-        setError(data.message || "Unable to send the verification code.");
-        return;
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Unable to send the verification code.");
       }
-
       setEmail(normalizedEmail);
       setStep("otp");
       setResendCooldown(60);
       setMessage("If an account exists for this email, a 6-digit verification code has been sent.");
     } catch (requestError) {
-      console.error("Request OTP error:", requestError);
-      setError("Unable to connect to the server. Please try again.");
+      console.error("Password recovery request failed:", requestError);
+      setError(requestError.message || "Unable to request password recovery.");
     } finally {
       setIsLoading(false);
     }
@@ -108,21 +147,21 @@ function ForgotPassword() {
         body: JSON.stringify({ email, otp }),
       });
       const data = await response.json();
-
-      if (!data.success) {
-        setError(data.message || "Invalid verification code.");
-        return;
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Invalid verification code.");
       }
-
       setResetToken(data.resetToken);
       setStep("password");
       setMessage("Email verified. Create your new password below.");
     } catch (requestError) {
       console.error("Verify OTP error:", requestError);
-      setError("Unable to verify the code. Please try again.");
+      setError(requestError.message || "Unable to verify the code.");
     } finally {
       setIsLoading(false);
     }
+    clearFeedback();
+
+    event.preventDefault();
   };
 
   const resetPassword = async (event) => {
@@ -131,7 +170,7 @@ function ForgotPassword() {
 
     const validPassword = Object.values(passwordCriteria).every(Boolean);
     if (!validPassword) {
-      setError("Password must be at least 8 characters and include uppercase, lowercase, number, and special character.");
+      setError("Password must be at least 14 characters and include uppercase, lowercase, number, and special character.");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -141,23 +180,30 @@ function ForgotPassword() {
 
     setIsLoading(true);
     try {
+      if (isSupabaseConfigured && supabase) {
+        const { error: updateError } = await supabase.auth.updateUser({
+          password: newPassword,
+        });
+        if (updateError) throw updateError;
+        setStep("success");
+        setMessage("Your password has been updated successfully.");
+        return;
+      }
+
       const response = await fetch(`${API_BASE_URL}/reset_password.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, resetToken, newPassword }),
       });
       const data = await response.json();
-
-      if (!data.success) {
-        setError(data.message || "Unable to change your password.");
-        return;
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Unable to change your password.");
       }
-
       setStep("success");
       setMessage(data.message);
     } catch (requestError) {
-      console.error("Reset password error:", requestError);
-      setError("Unable to connect to the server. Please try again.");
+      console.error("Password update failed:", requestError);
+      setError(requestError.message || "Unable to change your password.");
     } finally {
       setIsLoading(false);
     }
@@ -171,7 +217,9 @@ function ForgotPassword() {
   }[step];
 
   const subtitle = {
-    email: "Enter your registered email and we'll send you a verification code.",
+    email: isSupabaseConfigured
+      ? "Enter your registered email and we'll send you a secure password recovery link."
+      : "Enter your registered email and we'll send you a verification code.",
     otp: `Enter the 6-digit code sent to ${email}.`,
     password: "Your email is verified. Set a strong new password.",
     success: "Your password has been updated successfully.",
@@ -303,7 +351,7 @@ function ForgotPassword() {
 
                 <div className="mb-5 flex flex-wrap gap-2 text-xs">
                   {[
-                    [passwordCriteria.length, "8+ chars"],
+                    [passwordCriteria.length, "14+ chars"],
                     [passwordCriteria.uppercase, "Uppercase"],
                     [passwordCriteria.lowercase, "Lowercase"],
                     [passwordCriteria.number, "Number"],

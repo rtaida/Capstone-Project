@@ -74,9 +74,20 @@ function getMatchingAuthToken() {
 }
 
 window.fetch = (input, init = {}) => {
-  const headers = new Headers(init.headers || {});
+  const headers = new Headers(input instanceof Request ? input.headers : undefined);
+  new Headers(init.headers || {}).forEach((value, name) => headers.set(name, value));
   const token = getMatchingAuthToken();
-  if (token) headers.set('Authorization', `Bearer ${token}`);
+  const requestUrl = new URL(
+    typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
+    window.location.origin,
+  );
+  if (
+    token &&
+    requestUrl.origin === window.location.origin &&
+    !headers.has("Authorization")
+  ) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
   return globalAuthFetch(input, { ...init, headers });
 };
 

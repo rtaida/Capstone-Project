@@ -3,6 +3,7 @@ import bgImage from "../assets/Capra bg.jpg";
 import logo from "../assets/logo.png";
 import { Link, useNavigate } from "react-router-dom";
 import { persistAuthToken, clearAuthToken } from "../services/api";
+import { isSupabaseConfigured, supabase } from "../lib/supabase";
 import {
   Mail,
   Lock,
@@ -120,14 +121,7 @@ function Login() {
   };
 
   const handlePasswordChange = (e) => {
-    const value = e.target.value;
-    if (detectSqlInjection(value)) {
-      setSqlDetails({ field: "Password", attempt: value });
-      setShowSqlPopup(true);
-      setPassword("");
-    } else {
-      setPassword(value);
-    }
+    setPassword(e.target.value);
   };
 
   const validateEmail = (email) => {
@@ -139,7 +133,10 @@ function Login() {
 
   const validatePassword = (password) => {
     if (!password) return "Password is required";
-    if (password.length < 6) return "Password must be at least 6 characters";
+    const minimumLength = isSupabaseConfigured ? 14 : 6;
+    if (password.length < minimumLength) {
+      return `Password must be at least ${minimumLength} characters`;
+    }
     return "";
   };
 
@@ -159,23 +156,78 @@ function Login() {
       setErrorMessage("");
 
       try {
-        const response = await fetch(`${API_BASE_URL}/login.php`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password }),
-        });
+        let data;
+        if (isSupabaseConfigured && supabase) {
+          const { data: authData, error: authError } =
+            await supabase.auth.signInWithPassword({ email, password });
+          if (authError) throw authError;
+          if (!authData.user || !authData.session) {
+            throw new Error("Sign-in did not return an active session.");
+          }
 
-        const contentType = response.headers.get("content-type") || "";
-        const data = contentType.includes("application/json")
-          ? await response.json()
-          : {
-              success: false,
-              message: `Server returned ${response.status} ${response.statusText}. Please check the backend URL and Apache.`,
-            };
+          let { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("id, full_name, role, admin_id, trainer_id, member_id")
+            .eq("id", authData.user.id)
+            .single();
+          if (profileError) throw profileError;
 
-        if (response.ok && data.success) {
+          if (authData.user.email?.toLowerCase() === "ramosjaredonarse07@gmail.com" && profile.role !== "admin") {
+            const { error: claimError } = await supabase.rpc("claim_initial_admin");
+            if (claimError) throw claimError;
+            const result = await supabase
+              .from("profiles")
+              .select("id, full_name, role, admin_id, trainer_id, member_id")
+              .eq("id", authData.user.id)
+              .single();
+            if (result.error) throw result.error;
+            profile = result.data;
+          }
+
+          data = {
+            success: true,
+            token: authData.session.access_token,
+            user: {
+              id: profile.admin_id || profile.trainer_id || profile.member_id || profile.id,
+              auth_id: profile.id,
+              admin_id: profile.admin_id,
+              trainer_id: profile.trainer_id,
+              member_id: profile.member_id,
+              fullName: profile.full_name || authData.user.email,
+              full_name: profile.full_name || authData.user.email,
+              email: authData.user.email,
+              role: profile.role,
+              type: profile.role === "admin" ? "Admin" : profile.role,
+            },
+          };
+        } else {
+          const response = await fetch(`${API_BASE_URL}/login.php`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+          });
+
+          const contentType = response.headers.get("content-type") || "";
+          data = contentType.includes("application/json")
+            ? await response.json()
+            : {
+                success: false,
+                message: `Server returned ${response.status} ${response.statusText}. Please check the backend URL and Apache.`,
+              };
+          if (!response.ok || !data.success) {
+            if (response.status === 429) {
+              const retryAfter = Math.max(1, Number(data.retry_after) || 240);
+              setLockoutSeconds(retryAfter);
+              setErrorMessage(`Too many failed login attempts. Login is locked for ${Math.ceil(retryAfter / 60)} minutes.`);
+            } else {
+              setErrorMessage(data.message || "Invalid email or password");
+            }
+            setShowErrorPopup(true);
+            return;
+          }
+        }
+
+        if (data.success) {
           localStorage.setItem("user", JSON.stringify(data.user));
           clearAuthToken();
           if (data.token) {
@@ -194,13 +246,7 @@ function Login() {
             navigate("/");
           }
         } else {
-          if (response.status === 429) {
-            const retryAfter = Math.max(1, Number(data.retry_after) || 240);
-            setLockoutSeconds(retryAfter);
-            setErrorMessage(`Too many failed login attempts. Login is locked for ${Math.ceil(retryAfter / 60)} minutes.`);
-          } else {
-            setErrorMessage(data.message || "Invalid email or password");
-          }
+          setErrorMessage(data.message || "Invalid email or password");
           setShowErrorPopup(true);
         }
       } catch (error) {
@@ -479,6 +525,14 @@ function Login() {
                     Register here
                   </Link>
                 </p>
+                {isSupabaseConfigured && (
+                  <p className="mt-3 text-xs text-zinc-500">
+                    First administrator?{" "}
+                    <Link to="/admin-setup" className="text-classic-gold hover:text-light-gold">
+                      Set up admin access
+                    </Link>
+                  </p>
+                )}
               </div>
             </form>
           </div>

@@ -51,6 +51,7 @@ import NotificationBell from "../../components/NotificationBell";
 import ConfirmActionModal from "../../components/ConfirmActionModal";
 import { useNotifications } from "../../hooks/useNotifications";
 import { clearAuthToken, getAuthHeaders, readStoredAuthToken } from "../../services/api";
+import { supabase } from "../../lib/supabase";
 
 
 
@@ -415,8 +416,16 @@ function AdminStaffDashboard() {
 
 
   const handleLogoutClick = () => setShowLogout(true);
-  const handleConfirmLogout = () => {
+  const handleConfirmLogout = async () => {
     setShowLogout(false);
+    if (supabase) {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Supabase sign-out failed:", error);
+        showFeedback("error", "Could not end the secure login session. Please try again.", "Logout Error");
+        return;
+      }
+    }
     localStorage.removeItem("user");
     localStorage.removeItem("auth_token");
     localStorage.removeItem("token");
