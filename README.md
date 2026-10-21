@@ -124,11 +124,11 @@ frontend's Supabase authentication.
 
 Set `VITE_SUPABASE_URL` and the Supabase **publishable/anon** key as Vercel
 environment variables, then redeploy. Never put a Supabase service-role key in
-a `VITE_*` variable or frontend source. Once the migration and configuration
-are in place, `/admin-setup` provides a one-time first-admin account setup for
-`ramosjaredonarse07@gmail.com`; the administrator chooses a private password of at least 8
-characters. The database function only permits that email to claim the first
-admin role, and refuses to grant the role after one has already been claimed.
+a `VITE_*` variable or frontend source. There is no public admin setup page.
+Provision the administrator account through Supabase Auth; signing in as
+`ramosjaredonarse07@gmail.com` can claim the first admin role once, if that
+account is eligible. The database function refuses to grant the role after
+another admin or staff role has already been claimed.
 
 This is only a schema and authentication foundation. The dashboards still call
 the PHP endpoints in `gym-backend/api`, which use SQL Server syntax and have

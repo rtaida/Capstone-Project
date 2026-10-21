@@ -525,14 +525,6 @@ function Login() {
                     Register here
                   </Link>
                 </p>
-                {isSupabaseConfigured && (
-                  <p className="mt-3 text-xs text-zinc-500">
-                    First administrator?{" "}
-                    <Link to="/admin-setup" className="text-classic-gold hover:text-light-gold">
-                      Set up admin access
-                    </Link>
-                  </p>
-                )}
               </div>
             </form>
           </div>
