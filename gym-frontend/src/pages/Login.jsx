@@ -133,7 +133,7 @@ function Login() {
 
   const validatePassword = (password) => {
     if (!password) return "Password is required";
-    const minimumLength = isSupabaseConfigured ? 14 : 6;
+    const minimumLength = 8;
     if (password.length < minimumLength) {
       return `Password must be at least ${minimumLength} characters`;
     }

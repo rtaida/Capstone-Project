@@ -169,9 +169,6 @@ function ForgotPassword() {
     } finally {
       setIsLoading(false);
     }
-    clearFeedback();
-
-    event.preventDefault();
   };
 
   const resetPassword = async (event) => {
