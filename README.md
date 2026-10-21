@@ -126,7 +126,7 @@ Set `VITE_SUPABASE_URL` and the Supabase **publishable/anon** key as Vercel
 environment variables, then redeploy. Never put a Supabase service-role key in
 a `VITE_*` variable or frontend source. Once the migration and configuration
 are in place, `/admin-setup` provides a one-time first-admin account setup for
-`ramosjaredonarse07@gmail.com`; the administrator chooses a private password of at least 14
+`ramosjaredonarse07@gmail.com`; the administrator chooses a private password of at least 8
 characters. The database function only permits that email to claim the first
 admin role, and refuses to grant the role after one has already been claimed.
 

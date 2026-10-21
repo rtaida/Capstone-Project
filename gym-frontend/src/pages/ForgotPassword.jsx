@@ -34,7 +34,7 @@ function ForgotPassword() {
 
   const passwordCriteria = useMemo(
     () => ({
-      length: newPassword.length >= 14,
+      length: newPassword.length >= 8,
       uppercase: /[A-Z]/.test(newPassword),
       lowercase: /[a-z]/.test(newPassword),
       number: /[0-9]/.test(newPassword),
@@ -180,7 +180,7 @@ function ForgotPassword() {
 
     const validPassword = Object.values(passwordCriteria).every(Boolean);
     if (!validPassword) {
-      setError("Password must be at least 14 characters and include uppercase, lowercase, number, and special character.");
+      setError("Password must be at least 8 characters and include uppercase, lowercase, number, and special character.");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -367,7 +367,7 @@ function ForgotPassword() {
 
                 <div className="mb-5 flex flex-wrap gap-2 text-xs">
                   {[
-                    [passwordCriteria.length, "14+ chars"],
+                    [passwordCriteria.length, "8+ chars"],
                     [passwordCriteria.uppercase, "Uppercase"],
                     [passwordCriteria.lowercase, "Lowercase"],
                     [passwordCriteria.number, "Number"],

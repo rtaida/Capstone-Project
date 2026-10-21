@@ -21,8 +21,8 @@ function AdminSetup() {
       setError("Administrator setup is not connected to Supabase yet.");
       return;
     }
-    if (password.length < 14) {
-      setError("Use a unique password with at least 14 characters.");
+    if (password.length < 8) {
+      setError("Use a unique password with at least 8 characters.");
       return;
     }
     if (password !== confirmPassword) {
@@ -95,13 +95,13 @@ function AdminSetup() {
               <Mail className="mr-2 inline" size={16} /> ramosjaredonarse07@gmail.com
             </div>
             <label className="block text-sm text-zinc-200">
-              New password (14 characters minimum)
+              New password (8 characters minimum)
               <span className="relative mt-2 block">
                 <Lock className="absolute left-3 top-3.5 text-zinc-500" size={18} />
                 <input
                   required
                   type="password"
-                  minLength={14}
+                  minLength={8}
                   autoComplete="new-password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
@@ -114,7 +114,7 @@ function AdminSetup() {
               <input
                 required
                 type="password"
-                minLength={14}
+                minLength={8}
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
