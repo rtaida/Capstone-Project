@@ -224,6 +224,9 @@ function ForgotPassword() {
     password: "Your email is verified. Set a strong new password.",
     success: "Your password has been updated successfully.",
   }[step];
+  const progressSteps = isSupabaseConfigured
+    ? ["email", "password"]
+    : ["email", "otp", "password"];
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-black text-white">
@@ -247,15 +250,14 @@ function ForgotPassword() {
           <div className="rounded-2xl border border-classic-gold/20 bg-soft-gray/5 p-7 backdrop-blur-xl shadow-2xl">
             {step !== "success" && (
               <div className="mb-7 flex items-center justify-center gap-2">
-                {["email", "otp", "password"].map((item, index) => {
-                  const steps = ["email", "otp", "password"];
-                  const active = steps.indexOf(step) >= index;
+                {progressSteps.map((item, index) => {
+                  const active = progressSteps.indexOf(step) >= index;
                   return (
                     <div key={item} className="flex items-center gap-2">
                       <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${active ? "bg-classic-gold text-black" : "bg-zinc-800 text-zinc-500"}`}>
                         {index + 1}
                       </div>
-                      {index < 2 && <div className={`h-px w-10 ${active && steps.indexOf(step) > index ? "bg-classic-gold" : "bg-zinc-700"}`} />}
+                      {index < progressSteps.length - 1 && <div className={`h-px w-10 ${active && progressSteps.indexOf(step) > index ? "bg-classic-gold" : "bg-zinc-700"}`} />}
                     </div>
                   );
                 })}
@@ -292,7 +294,9 @@ function ForgotPassword() {
                   />
                 </div>
                 <button type="submit" disabled={isLoading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient py-3 font-bold text-black transition hover:scale-[1.02] disabled:opacity-50">
-                  {isLoading ? "Sending Code..." : <>Send Verification Code <ArrowRight className="h-4 w-4" /></>}
+                  {isLoading
+                    ? isSupabaseConfigured ? "Sending Recovery Link..." : "Sending Code..."
+                    : <>{isSupabaseConfigured ? "Send Recovery Link" : "Send Verification Code"} <ArrowRight className="h-4 w-4" /></>}
                 </button>
               </form>
             )}
