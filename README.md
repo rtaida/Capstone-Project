@@ -24,6 +24,25 @@ A React + PHP + Microsoft SQL Server gym management system for administrators, t
 
 The `.bacpac` currently used by the project contains the live table structure used by the repair migration.
 
+### Creating a sanitized local demo database
+
+Never commit a `.bacpac` or `.bak` file. Database backups may contain member,
+staff, payment, password-reset, and audit data. The root `.gitignore` excludes
+these backup formats.
+
+For a demo copy, import the backup into a separate SQL Server database named
+`GymDBDemo`; do not import over `GymDB`. Then select `GymDBDemo` in SQL Server
+Management Studio or `sqlcmd` and run
+`gym-backend/sanitize_demo_database.sql`. The script refuses to run unless the
+selected database is exactly `GymDBDemo`. It replaces account contact details
+with reserved example addresses, disables existing account passwords, removes
+profile/QR references, and clears reset tokens, notifications, rate limits, and
+audit records. The original `GymDB` is not changed.
+
+Existing demo accounts cannot log in after sanitization. Create a separate
+demo administrator through a controlled local process before using the demo;
+do not reuse live account credentials.
+
 ## Configuration
 Set environment variables before running the backend when possible:
 - `CAPRA_DB_SERVER`
