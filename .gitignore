@@ -23,3 +23,7 @@ gym-backend/api/*_log.txt
 gym-backend/.env
 gym-backend/.env.*
 !gym-backend/.env.example
+
+# Database backups may contain private member data
+*.bacpac
+*.bak
