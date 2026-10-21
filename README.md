@@ -119,8 +119,8 @@ as those values are exposed to browser clients.
 The PostgreSQL schema foundation is in
 `supabase/migrations/20261021220000_initial_schema.sql`. It creates a clean
 schema only; it does not import records from the local SQL Server database.
-Review and run this migration in the Supabase SQL Editor before enabling the
-frontend's Supabase authentication.
+Apply the schema migration and subsequent migrations in `supabase/migrations`
+to the Supabase project.
 
 Set `VITE_SUPABASE_URL` and the Supabase **publishable/anon** key as Vercel
 environment variables, then redeploy. Never put a Supabase service-role key in
@@ -130,8 +130,16 @@ Provision the administrator account through Supabase Auth; signing in as
 account is eligible. The database function refuses to grant the role after
 another admin or staff role has already been claimed.
 
-This is only a schema and authentication foundation. The dashboards still call
-the PHP endpoints in `gym-backend/api`, which use SQL Server syntax and have
-not yet been replaced by Supabase Edge Functions. Do not treat this deployment
-as a fully migrated or functional online system until those API workflows have
-been ported and tested.
+When Supabase is configured, member registration creates an Auth account and a
+pending member record. Members must confirm their email and be approved by an
+administrator before they can sign in. Password recovery uses Supabase Auth;
+configure a custom SMTP provider if the project's built-in email limit is
+insufficient.
+
+The admin, trainer, member, billing, attendance, session, and notification
+dashboards still call the PHP endpoints in `gym-backend/api`, which use SQL
+Server syntax. Those operations have not yet been ported to Supabase Edge
+Functions, so registration and authentication alone do not make the deployed
+gym system fully operable online. Keep the PHP backend and SQL Server available
+for those workflows until their Supabase replacements are implemented and
+verified.

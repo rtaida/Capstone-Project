@@ -25,6 +25,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { buildMemberFullName } from "../utils/memberName";
+import { isSupabaseConfigured, supabase } from "../lib/supabase";
 
 
 const RegisterSkeleton = () => {
@@ -104,6 +105,7 @@ function Register() {
   const [touched, setTouched] = useState({});
   const [showErrorPopup, setShowErrorPopup] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [registrationNeedsEmailConfirmation, setRegistrationNeedsEmailConfirmation] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [showSqlPopup, setShowSqlPopup] = useState(false);
@@ -291,6 +293,45 @@ function Register() {
       setErrorMessage("");
 
       try {
+        if (isSupabaseConfigured && supabase) {
+          const firstName = formData.firstName.trim();
+          const lastName = formData.lastName.trim();
+          const middleInitial = formData.middleInitial.trim();
+          const fullName = buildMemberFullName({
+            first_name: firstName,
+            last_name: lastName,
+            middle_initial: middleInitial,
+          });
+          const { data, error } = await supabase.auth.signUp({
+            email: formData.email.trim().toLowerCase(),
+            password: formData.password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/login`,
+              data: {
+                full_name: fullName,
+                registration: {
+                  first_name: firstName,
+                  last_name: lastName,
+                  middle_initial: middleInitial,
+                  phone: formData.phone.trim(),
+                  weight: String(formData.weight),
+                  height: String(formData.height),
+                  date_of_birth: formData.date_of_birth,
+                  gender: formData.gender,
+                  payment_method: formData.paymentMethod,
+                },
+              },
+            },
+          });
+          if (error) throw error;
+          if (!data.user) {
+            throw new Error("Registration did not return an account. Please try again.");
+          }
+          setRegistrationNeedsEmailConfirmation(!data.session);
+          setShowSuccessPopup(true);
+          return;
+        }
+
         const apiBaseUrl =
           import.meta.env.VITE_API_URL ||
           "/api";
@@ -323,7 +364,7 @@ function Register() {
           };
 
         if (response.ok && data.success) {
-
+          setRegistrationNeedsEmailConfirmation(false);
           setShowSuccessPopup(true);
 
         } else {
@@ -499,7 +540,11 @@ function Register() {
                 <h3 className="text-lg font-bold text-emerald-400">Registration Successful!</h3>
               </div>
               <div className="text-zinc-300 text-sm mb-6 space-y-2">
-                <p>Your account has been created successfully!</p>
+                <p>
+                  {registrationNeedsEmailConfirmation
+                    ? "Your application has been submitted. Check your email and confirm your address to activate your sign-in."
+                    : "Your account has been created successfully!"}
+                </p>
                 <p className="text-yellow-400/80 text-xs">
                   Your account is pending admin approval.
                   You will be able to login once an admin approves your registration.

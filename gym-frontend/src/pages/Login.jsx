@@ -184,6 +184,30 @@ function Login() {
             profile = result.data;
           }
 
+          if (profile.role === "member") {
+            if (!profile.member_id) {
+              const { error: signOutError } = await supabase.auth.signOut();
+              if (signOutError) throw signOutError;
+              throw new Error("Your member account is not linked correctly. Please contact the gym administrator.");
+            }
+            const { data: member, error: memberError } = await supabase
+              .from("members")
+              .select("status, approval_status, deleted_at")
+              .eq("member_id", profile.member_id)
+              .maybeSingle();
+            if (memberError) throw memberError;
+            if (
+              !member ||
+              member.deleted_at ||
+              !["active", "approved"].includes(String(member.status || "").toLowerCase()) ||
+              !["active", "approved"].includes(String(member.approval_status || "").toLowerCase())
+            ) {
+              const { error: signOutError } = await supabase.auth.signOut();
+              if (signOutError) throw signOutError;
+              throw new Error("Your account is pending approval or inactive. Please contact the gym administrator.");
+            }
+          }
+
           data = {
             success: true,
             token: authData.session.access_token,
