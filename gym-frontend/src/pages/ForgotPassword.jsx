@@ -124,7 +124,17 @@ function ForgotPassword() {
       setMessage("If an account exists for this email, a 6-digit verification code has been sent.");
     } catch (requestError) {
       console.error("Password recovery request failed:", requestError);
-      setError(requestError.message || "Unable to request password recovery.");
+      if (
+        isSupabaseConfigured &&
+        /email rate limit exceeded/i.test(requestError.message || "")
+      ) {
+        setResendCooldown(60);
+        setError(
+          "Supabase temporarily limited recovery emails for this project. Please wait before trying again. If this continues, the project owner may need to configure a custom SMTP provider in Supabase."
+        );
+      } else {
+        setError(requestError.message || "Unable to request password recovery.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -293,10 +303,12 @@ function ForgotPassword() {
                     autoComplete="email"
                   />
                 </div>
-                <button type="submit" disabled={isLoading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient py-3 font-bold text-black transition hover:scale-[1.02] disabled:opacity-50">
+                <button type="submit" disabled={isLoading || (isSupabaseConfigured && resendCooldown > 0)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient py-3 font-bold text-black transition hover:scale-[1.02] disabled:opacity-50">
                   {isLoading
                     ? isSupabaseConfigured ? "Sending Recovery Link..." : "Sending Code..."
-                    : <>{isSupabaseConfigured ? "Send Recovery Link" : "Send Verification Code"} <ArrowRight className="h-4 w-4" /></>}
+                    : isSupabaseConfigured && resendCooldown > 0
+                      ? `Try again in ${resendCooldown}s`
+                      : <>{isSupabaseConfigured ? "Send Recovery Link" : "Send Verification Code"} <ArrowRight className="h-4 w-4" /></>}
                 </button>
               </form>
             )}
