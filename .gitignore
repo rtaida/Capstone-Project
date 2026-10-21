@@ -1,0 +1,25 @@
+# Frontend dependencies/build
+gym-frontend/node_modules/
+gym-frontend/dist/
+gym-frontend/.vite/
+gym-frontend/certs/
+gym-frontend/.env
+gym-frontend/.env.*
+!gym-frontend/.env.example
+
+# Backend runtime artifacts
+gym-backend/profile_uploads/*
+!gym-backend/profile_uploads/.gitkeep
+gym-backend/qrcodes/*
+!gym-backend/qrcodes/.gitkeep
+gym-backend/session_uploads/*
+!gym-backend/session_uploads/.gitkeep
+gym-backend/api/*_log.txt
+
+# Local secrets/config
+.env
+.env.*
+!.env.example
+gym-backend/.env
+gym-backend/.env.*
+!gym-backend/.env.example
